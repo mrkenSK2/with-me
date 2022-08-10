@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 int main(int argc, char *argv[]){
-	printf("\e[2J\e[1;1H");                   // clear
+	system("clear");
+	//printf("\e[2J\e[1;1H");                   // clear
 	printf("\e[33m\e[46m");                   // color
 	printf("change\n");
 	printf("\e[39m\e[49m");                   // reset
