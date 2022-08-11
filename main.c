@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define BUFFER_SIZE 256
+#define BUFFER_SIZE 2
 
 void file_print(char *filename){
 	FILE *fp;
@@ -22,7 +22,7 @@ struct string{
 	char str[BUFFER_SIZE];
 	struct string* prev;
 	struct string* next;
-}
+};
 
 struct string* insert(struct string* insert_to_nextpoint){
 	struct string* new_str = (struct string*)malloc(sizeof(struct string));
@@ -51,7 +51,7 @@ void file_read(char* filename, struct string* head){
 		exit(1);
 	}
 	struct string* current = head;
-	while(fgets(buf, sizeof(buf), fp)){
+	while(fgets(buf, sizeof(buf), fp) != NULL){
 		strcpy(current->str, buf);
 		insert(current);
 		current = current->next;
@@ -70,23 +70,24 @@ int main(int argc, char **argv){
 		printf("usage: ./a.out filename\n");
 	}else{
 		file_read(argv[1], head);
-		struct string* current  head;
+		struct string* current = head;
 
-	while(current->next != NULL){
-		printf("%s", current->str):
-		current = current->next;
-	}
-	printf("%s", current->str);
+		while(current->next != NULL){
+			printf("%s", current->str);
+			current = current->next;
+		}
+		printf("%s", current->str);
 
-	// reverse
-	while(current->prev != NULL){
+		// reverse
+		while(current->prev != NULL){
+			printf("%c", current->str[1]);
+	 		printf("%c", current->str[0]);
+			current = current->prev;
+		}
+
 		printf("%c", current->str[1]);
-	 	printf("%c", current->str[0]);
-	current = current->prev;
+		printf("%c", current->str[0]);
 	}
-
-	printf("%c", current->str[1]);
-	printf("%c", current->str[0]);
-	}
+	free(head);
 	return 0;
 }
