@@ -1,8 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <termios.h>
 
-#define BUFFER_SIZE 2
+#define BUFFER_SIZE 100
+
+struct termios cookedMode, rawMode; 
 
 void file_print(char *filename){
 	FILE *fp;
@@ -62,7 +66,6 @@ void file_read(char* filename, struct string* head){
 
 		
 int main(int argc, char **argv){
-	system("clear");
 	struct string* head = (struct string*)malloc(sizeof(struct string));
 	head->prev = NULL;
 	head->next = NULL;
@@ -71,23 +74,31 @@ int main(int argc, char **argv){
 	}else{
 		file_read(argv[1], head);
 		struct string* current = head;
-
-		while(current->next != NULL){
-			printf("%s", current->str);
-			current = current->next;
+		char input_key;
+		if(tcgetattr(STDIN_FILENO, &cookedMode) != 0){
+			perror("tcgetattr() error");
+		}else{
+			cfmakeraw(&rawMode);
+			tcsetattr(STDIN_FILENO, 0, &rawMode);	
+			while(current != NULL){
+				system("clear");
+				printf("%s", current->str);
+				
+				input_key = getchar();
+				if(input_key == 'n'){
+					current = current->next;
+				}
+				if(input_key == 'p'){
+					current = current->prev;
+				}
+				if(input_key == 'e'){
+					system("clear");
+					break;
+				}
+			}
+			tcsetattr(STDIN_FILENO, 0, &cookedMode);
 		}
-		printf("%s", current->str);
-
-		// reverse
-		while(current->prev != NULL){
-			printf("%c", current->str[1]);
-	 		printf("%c", current->str[0]);
-			current = current->prev;
-		}
-
-		printf("%c", current->str[1]);
-		printf("%c", current->str[0]);
+		free(head);
 	}
-	free(head);
 	return 0;
 }
