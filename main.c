@@ -1,82 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+//#include <string.h>
 #include <unistd.h>
 #include <termios.h>
+#include "str.h"
 
 #define BUFFER_SIZE 100
 
 struct termios cookedMode, rawMode; 
-
-void file_print(char *filename){
-	FILE *fp;
-	char str[BUFFER_SIZE];
-	if((fp=fopen(filename, "r")) == NULL){
-		fprintf(stderr, "file cannot open\n");
-		exit(1);
-	}
-	while(fgets(str, sizeof(str), fp)!=NULL){
-		printf("%s", str);
-	}
-	fclose(fp);
-	return;
-}
-
-struct string{
-	char str[BUFFER_SIZE];
-	struct string* prev;
-	struct string* next;
-};
-
-struct string* insert(struct string* insert_to_nextpoint){
-	struct string* new_str = (struct string*)malloc(sizeof(struct string));
-	if(insert_to_nextpoint == NULL){
-		new_str->prev = NULL;
-		new_str->next = NULL;
-	}else{
-		new_str->prev = insert_to_nextpoint;
-		if(insert_to_nextpoint->next != NULL){
-			insert_to_nextpoint->next->prev = new_str;
-			new_str->next = insert_to_nextpoint->next;
-		}else{
-			new_str->next = NULL;
-		}
-		insert_to_nextpoint->next = new_str;
-	}
-	return new_str;
-}
-
-void file_read(char* filename, struct string* head){
-	FILE* fp;
-	char buf[BUFFER_SIZE];
-	
-	if((fp = fopen(filename, "r")) == NULL){
-		fprintf(stderr, "file open error\n");
-		exit(1);
-	}
-	struct string* current = head;
-	// only first time
-	if(fgets(buf, sizeof(buf), fp) != NULL){
-		strcpy(current->str, buf);
-	}
-	while(fgets(buf, sizeof(buf), fp) != NULL){
-		insert(current);
-		current = current->next;
-		strcpy(current->str, buf);
-	}
-	fclose(fp);
-	return;
-}
-
-void flag_reset(int *array, int length){
-	for(int i=0;i<length;i++){
-		array[i] = 0;
-	}
-	return;
-}
 		
 int main(int argc, char **argv){
-	struct string* head = (struct string*)malloc(sizeof(struct string));
+	struct str* head = (struct str*)malloc(sizeof(struct str));
 	int line_num=1;
 	head->prev = NULL;
 	head->next = NULL;
@@ -84,14 +18,14 @@ int main(int argc, char **argv){
 		printf("usage: ./a.out filename\n");
 	}else{
 		file_read(argv[1], head);
-		struct string* tmp = head;
+		struct str* tmp = head;
 		// check line
 		while(tmp->next != NULL){
 			++line_num;
 			tmp = tmp->next;
 		}
 		
-		struct string* current = head;
+		struct str* current = head;
 		char input_key;
 		int line = 1;
 		if(tcgetattr(STDIN_FILENO, &cookedMode) != 0){
