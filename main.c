@@ -30,6 +30,9 @@ int main(int argc, char **argv){
 		char input_key;
 		int line = 1;
 		int line_limit = 40;
+		// 出力行番号の始まり終わり
+		int out_start_index, out_end_index;
+		struct str *out_start, *out_end;
 		if(tcgetattr(STDIN_FILENO, &cookedMode) != 0){
 			perror("tcgetattr() error");
 		}else{
@@ -38,19 +41,23 @@ int main(int argc, char **argv){
 			system("clear");
 			if(line_num<40) line_limit = line_num;
 			for(int i=0;i<line_limit;i++){
-				//system("clear");
 				printf("%s\r", current->str);
+				out_end = current;
 				current = current->next;
 			}
+			out_start = head;
+			//out_end = current->prev;
 			// back 1 line
 			printf("\033[1;1H");
 			current = head;
 			cursor[0]= 1;
 			cursor[1]= 1;
-			//printf("\033[%02d;%02dH", 1, 1);
-			int offset;
+			out_start_index = 1;
+			out_end_index = line_limit;
 			while(1){
 				system("clear");
+				// 	ここが始まるときは書き始め
+				current = out_start;
 				for(int i=0;i<line_limit;i++){
 					printf("%s\r", current->str);
 					current = current->next;
@@ -61,36 +68,48 @@ int main(int argc, char **argv){
 				printf("\033[%d;1H", cursor[0]);
 				input_key = getchar();
 				if(input_key == 'k'){
-					if(current->prev == NULL){
+					if(out_start->prev == NULL){
+						// 表示は変わらないカーソルのみずらす
+						if(line!=1){
+							--line;
+							cursor[0] -= 1;
+						}
+						out_start_index = 1;
+						out_end_index = line_limit;
+
 						continue;
 					}
+					// 表示も変わるか、カーソルのみずれるか
 					--line;
-					cursor[0] = line;
-					current = current->prev;
-					printf("\033[1A");
+					if(line < out_start_index){
+						// 出力行が変わる
+						out_start = out_start->prev;
+						out_end = out_end->prev;
+						out_start_index -= 1;
+						out_end_index -= 1;
+					}else{
+						// カーソルのみ
+						cursor[0] -= 1;
+					}
 				}
 				if(input_key == 'j'){
-					if(current == NULL){
-						current = head;
-						for(int i=0;i<offset;i++){
-							current=current->next;
+					if(out_end->next == NULL){
+						if(line!=line_num){
+							++line;
+							cursor[0] += 1;
 						}
+						out_end_index = line_num;
 						continue;
 					}
 					++line;
-					current = current->next;
-					if(line - line_limit <= 0){
-						offset = 0;
+					if(line > out_end_index){
+						// 出力行が変わる
+						out_start = out_start->next;
+						out_end = out_end->next;
+						out_start_index += 1;
+						out_end_index += 1;
 					}else{
-						offset = line - line_limit;
-					}
-					current = head;
-					for(int i=0;i<offset;i++){
-						current=current->next;
-					}
-					if(!(line<=line_num && offset > 0)){
-						// cursor is more than 40 line
-						//current = head;
+						// カーソルのみ
 						cursor[0] += 1;
 					}
 				}
