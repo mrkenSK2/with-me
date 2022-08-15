@@ -3,123 +3,115 @@
 #include <string.h>
 #include <unistd.h>
 #include <termios.h>
+#include "str.h"
 
 #define BUFFER_SIZE 100
 
 struct termios cookedMode, rawMode; 
-
-void file_print(char *filename){
-	FILE *fp;
-	char str[BUFFER_SIZE];
-	if((fp=fopen(filename, "r")) == NULL){
-		fprintf(stderr, "file cannot open\n");
-		exit(1);
-	}
-	while(fgets(str, sizeof(str), fp)!=NULL){
-		printf("%s", str);
-	}
-	fclose(fp);
-	return;
-}
-
-struct string{
-	char str[BUFFER_SIZE];
-	struct string* prev;
-	struct string* next;
-};
-
-struct string* insert(struct string* insert_to_nextpoint){
-	struct string* new_str = (struct string*)malloc(sizeof(struct string));
-	if(insert_to_nextpoint == NULL){
-		new_str->prev = NULL;
-		new_str->next = NULL;
-	}else{
-		new_str->prev = insert_to_nextpoint;
-		if(insert_to_nextpoint->next != NULL){
-			insert_to_nextpoint->next->prev = new_str;
-			new_str->next = insert_to_nextpoint->next;
-		}else{
-			new_str->next = NULL;
-		}
-		insert_to_nextpoint->next = new_str;
-	}
-	return new_str;
-}
-
-void file_read(char* filename, struct string* head){
-	FILE* fp;
-	char buf[BUFFER_SIZE];
-	
-	if((fp = fopen(filename, "r")) == NULL){
-		fprintf(stderr, "file open error\n");
-		exit(1);
-	}
-	struct string* current = head;
-	// only first time
-	if(fgets(buf, sizeof(buf), fp) != NULL){
-		strcpy(current->str, buf);
-	}
-	while(fgets(buf, sizeof(buf), fp) != NULL){
-		insert(current);
-		current = current->next;
-		strcpy(current->str, buf);
-	}
-	fclose(fp);
-	return;
-}
-
-void flag_reset(int *array, int length){
-	for(int i=0;i<length;i++){
-		array[i] = 0;
-	}
-	return;
-}
 		
 int main(int argc, char **argv){
-	struct string* head = (struct string*)malloc(sizeof(struct string));
+	struct str* head = (struct str*)malloc(sizeof(struct str));
 	int line_num=1;
+	int cursor[2] = {1, 1};
 	head->prev = NULL;
 	head->next = NULL;
 	if(argc != 2){
 		printf("usage: ./a.out filename\n");
 	}else{
 		file_read(argv[1], head);
-		struct string* tmp = head;
+		struct str* tmp = head;
 		// check line
 		while(tmp->next != NULL){
 			++line_num;
 			tmp = tmp->next;
 		}
 		
-		struct string* current = head;
+		struct str* current = head;
 		char input_key;
 		int line = 1;
+		int line_limit = 40;
+		// 出力行番号の始まり終わり
+		int out_start_index, out_end_index;
+		struct str *out_start, *out_end;
 		if(tcgetattr(STDIN_FILENO, &cookedMode) != 0){
 			perror("tcgetattr() error");
 		}else{
 			cfmakeraw(&rawMode);
-			tcsetattr(STDIN_FILENO, 0, &rawMode);	
+			tcsetattr(STDIN_FILENO, 0, &rawMode);
+			system("clear");
+			if(line_num<40) line_limit = line_num;
+			for(int i=0;i<line_limit;i++){
+				printf("%s\r", current->str);
+				out_end = current;
+				current = current->next;
+			}
+			out_start = head;
+			//out_end = current->prev;
+			// back 1 line
+			printf("\033[1;1H");
+			current = head;
+			cursor[0]= 1;
+			cursor[1]= 1;
+			out_start_index = 1;
+			out_end_index = line_limit;
 			while(1){
 				system("clear");
-				printf("%s", current->str);
-				printf("\n\rline%d\n", line);
-				if(line == 1) printf("\rhead of line\n");
-				else if(line == line_num) printf("\rend of line\n");
-
+				// 	ここが始まるときは書き始め
+				current = out_start;
+				for(int i=0;i<line_limit;i++){
+					printf("%s\r", current->str);
+					current = current->next;
+				}
+				printf("\033[41;1H");
+				printf("\033[0J");
+				printf("line%d", line);
+				printf("\033[%d;1H", cursor[0]);
 				input_key = getchar();
-				if(input_key == 'p'){
-					if(current->prev == NULL){
+				if(input_key == 'k'){
+					if(out_start->prev == NULL){
+						// 表示は変わらないカーソルのみずらす
+						if(line!=1){
+							--line;
+							cursor[0] -= 1;
+						}
+						out_start_index = 1;
+						out_end_index = line_limit;
+
 						continue;
 					}
+					// 表示も変わるか、カーソルのみずれるか
 					--line;
-					current = current->prev;
+					if(line < out_start_index){
+						// 出力行が変わる
+						out_start = out_start->prev;
+						out_end = out_end->prev;
+						out_start_index -= 1;
+						out_end_index -= 1;
+					}else{
+						// カーソルのみ
+						cursor[0] -= 1;
+					}
 				}
-				if(input_key == 'n'){
-					if(current->next == NULL){
+				if(input_key == 'j'){
+					if(out_end->next == NULL){
+						if(line!=line_num){
+							++line;
+							cursor[0] += 1;
+						}
+						out_end_index = line_num;
 						continue;
 					}
 					++line;
-					current = current->next;
+					if(line > out_end_index){
+						// 出力行が変わる
+						out_start = out_start->next;
+						out_end = out_end->next;
+						out_start_index += 1;
+						out_end_index += 1;
+					}else{
+						// カーソルのみ
+						cursor[0] += 1;
+					}
 				}
 				if(input_key == 'e'){
 					system("clear");
