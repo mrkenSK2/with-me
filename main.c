@@ -57,15 +57,15 @@ int main(int argc, char **argv){
 			while(1){
 				system("clear");
 				// 	ここが始まるときは書き始め
-				current = out_start;
+				tmp = out_start;
 				for(int i=0;i<line_limit;i++){
-					printf("%s\r", current->str);
-					current = current->next;
+					printf("%s\r", tmp->str);
+					tmp = tmp->next;
 				}
 				printf("\033[41;1H");
 				printf("\033[0J");
 				printf("line%d", line);
-				printf("\033[%d;1H", cursor[0]);
+				printf("\033[%d;%dH", cursor[0], cursor[1]);
 				input_key = getchar();
 				if(input_key == 'k'){
 					if(out_start->prev == NULL){
@@ -73,6 +73,13 @@ int main(int argc, char **argv){
 						if(line!=1){
 							--line;
 							cursor[0] -= 1;
+							current = current->prev;
+							int str_len = strlen(current->str);
+							if(cursor[1] > str_len
+							|| current->str[cursor[1]-1] == '\n'){
+								if(current->str[str_len-1] == '\n') cursor[1] = str_len-1;
+								else cursor[1] = str_len;
+							}
 						}
 						out_start_index = 1;
 						out_end_index = line_limit;
@@ -81,6 +88,13 @@ int main(int argc, char **argv){
 					}
 					// 表示も変わるか、カーソルのみずれるか
 					--line;
+					current = current->prev;
+					int str_len = strlen(current->str);
+					if(cursor[1] > str_len
+					|| current->str[cursor[1]-1] == '\n'){
+						if(current->str[str_len-1] == '\n') cursor[1] = str_len-1;
+						else cursor[1] = str_len;
+					}
 					if(line < out_start_index){
 						// 出力行が変わる
 						out_start = out_start->prev;
@@ -97,11 +111,25 @@ int main(int argc, char **argv){
 						if(line!=line_num){
 							++line;
 							cursor[0] += 1;
+							current = current->next;
+							int str_len = strlen(current->str);
+							if(cursor[1] > str_len
+							|| current->str[cursor[1]-1] == '\n'){
+								if(current->str[str_len-1] == '\n') cursor[1] = str_len-1;
+								else cursor[1] = str_len;
+							}
 						}
 						out_end_index = line_num;
 						continue;
 					}
 					++line;
+					current = current->next;
+					int str_len = strlen(current->str);
+					if(cursor[1] > str_len
+					|| current->str[cursor[1]-1] == '\n'){
+						if(current->str[str_len-1] == '\n') cursor[1] = str_len-1;
+						else cursor[1] = str_len;
+					}
 					if(line > out_end_index){
 						// 出力行が変わる
 						out_start = out_start->next;
@@ -111,6 +139,16 @@ int main(int argc, char **argv){
 					}else{
 						// カーソルのみ
 						cursor[0] += 1;
+					}
+				}
+				if(input_key == 'l'){
+					if(cursor[1] != strlen(current->str) && current->str[cursor[1]] != '\n'){
+						cursor[1] += 1;
+					}
+				}
+				if(input_key == 'h'){
+					if(cursor[1] != 1){
+						cursor[1] -= 1;
 					}
 				}
 				if(input_key == 'e'){
